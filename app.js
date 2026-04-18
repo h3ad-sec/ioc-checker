@@ -5,7 +5,7 @@ async function checkIOC() {
   const output = document.getElementById("output");
 
   if (!ioc) {
-    output.innerText = "Please enter an IOC";
+    output.innerText = "Enter an IOC first";
     return;
   }
 
@@ -16,7 +16,8 @@ async function checkIOC() {
     const data = await res.json();
 
     output.innerText = JSON.stringify(data, null, 2);
+
   } catch (err) {
-    output.innerText = "Error fetching data: " + err.message;
+    output.innerText = "Error: " + err.message;
   }
 }
