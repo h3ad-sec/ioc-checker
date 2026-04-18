@@ -4,7 +4,7 @@ async function checkIOC() {
 
     output.innerText = "Checking...";
 
-    const res = await fetch("https://YOUR-VERCEL-APP/api/check?ioc=" + ioc);
+    const res = await fetch("https://ioc-checker.vercel.app/api/check?ioc=" + ioc);
     const data = await res.json();
 
     output.innerText = JSON.stringify(data, null, 2);
