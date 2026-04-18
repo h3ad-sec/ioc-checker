@@ -14,39 +14,53 @@ export default async function handler(req, res) {
   try {
 
     // ---------------- OTX ----------------
-    const otx = await fetch(
+    const otxRes = await fetch(
       `https://otx.alienvault.com/api/v1/indicators/IPv4/${ioc}/general`
     );
-    result.sources.otx = await otx.json();
+    result.sources.otx = await otxRes.json();
 
     // ---------------- AbuseIPDB ----------------
-    const abuse = await fetch(
-      `https://api.abuseipdb.com/api/v2/check?ipAddress=${ioc}`,
-      {
-        headers: {
-          Key: process.env.ABUSE_KEY,
-          Accept: "application/json"
+    if (process.env.ABUSE_KEY) {
+      const abuseRes = await fetch(
+        `https://api.abuseipdb.com/api/v2/check?ipAddress=${ioc}`,
+        {
+          headers: {
+            Key: process.env.ABUSE_KEY.trim(),
+            Accept: "application/json"
+          }
         }
-      }
-    );
-    result.sources.abuseipdb = await abuse.json();
+      );
+
+      result.sources.abuseipdb = await abuseRes.json();
+    } else {
+      result.sources.abuseipdb = {
+        error: "ABUSE_KEY missing in environment variables"
+      };
+    }
 
     // ---------------- VirusTotal ----------------
-    const vt = await fetch(
-      `https://www.virustotal.com/api/v3/ip_addresses/${ioc}`,
-      {
-        headers: {
-          "x-apikey": process.env.VT_KEY
+    if (process.env.VT_KEY) {
+      const vtRes = await fetch(
+        `https://www.virustotal.com/api/v3/ip_addresses/${ioc}`,
+        {
+          headers: {
+            "x-apikey": process.env.VT_KEY.trim()
+          }
         }
-      }
-    );
-    result.sources.virustotal = await vt.json();
+      );
+
+      result.sources.virustotal = await vtRes.json();
+    } else {
+      result.sources.virustotal = {
+        error: "VT_KEY missing in environment variables"
+      };
+    }
 
     res.status(200).json(result);
 
   } catch (err) {
     res.status(500).json({
-      error: "IOC enrichment failed",
+      error: "Backend failure",
       details: err.message
     });
   }
