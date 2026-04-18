@@ -1,11 +1,22 @@
+const API_URL = "https://ioc-checker.vercel.app/api/check";
+
 async function checkIOC() {
-    const ioc = document.getElementById("ioc").value;
-    const output = document.getElementById("output");
+  const ioc = document.getElementById("ioc").value;
+  const output = document.getElementById("output");
 
-    output.innerText = "Checking...";
+  if (!ioc) {
+    output.innerText = "Please enter an IOC";
+    return;
+  }
 
-    const res = await fetch("https://ioc-checker.vercel.app/api/check?ioc=" + ioc);
+  output.innerText = "Analyzing IOC...";
+
+  try {
+    const res = await fetch(`${API_URL}?ioc=${ioc}`);
     const data = await res.json();
 
     output.innerText = JSON.stringify(data, null, 2);
+  } catch (err) {
+    output.innerText = "Error fetching data: " + err.message;
+  }
 }
