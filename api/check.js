@@ -1,67 +1,83 @@
 export default async function handler(req, res) {
-  const ioc = req.query.ioc;
+  const iocs = (req.query.ioc || "").split(",").map(x => x.trim());
 
-  if (!ioc) {
-    return res.status(400).json({ error: "IOC missing" });
-  }
+  const results = [];
 
-  const result = {
-    ioc,
-    timestamp: new Date().toISOString(),
-    sources: {}
-  };
+  for (const ioc of iocs) {
 
-  try {
+    const item = {
+      ioc,
+      type: detectType(ioc),
+      score: 0,
+      severity: "UNKNOWN",
+      sources: {}
+    };
 
-    // ---------------- OTX ----------------
-    const otxRes = await fetch(
-      `https://otx.alienvault.com/api/v1/indicators/IPv4/${ioc}/general`
-    );
-    result.sources.otx = await otxRes.json();
+    try {
 
-    // ---------------- AbuseIPDB ----------------
-    if (process.env.ABUSE_KEY) {
-      const abuseRes = await fetch(
+      // OTX
+      const otx = await fetch(
+        `https://otx.alienvault.com/api/v1/indicators/IPv4/${ioc}/general`
+      ).catch(() => null);
+
+      if (otx) item.sources.otx = await otx.json();
+
+      // AbuseIPDB
+      const abuse = await fetch(
         `https://api.abuseipdb.com/api/v2/check?ipAddress=${ioc}`,
         {
           headers: {
-            Key: process.env.ABUSE_KEY.trim(),
+            Key: process.env.ABUSE_KEY,
             Accept: "application/json"
           }
         }
       );
 
-      result.sources.abuseipdb = await abuseRes.json();
-    } else {
-      result.sources.abuseipdb = {
-        error: "ABUSE_KEY missing in environment variables"
-      };
-    }
+      const abuseData = await abuse.json();
+      item.sources.abuseipdb = abuseData;
 
-    // ---------------- VirusTotal ----------------
-    if (process.env.VT_KEY) {
-      const vtRes = await fetch(
+      const abuseScore = abuseData?.data?.abuseConfidenceScore || 0;
+
+      // VirusTotal
+      const vt = await fetch(
         `https://www.virustotal.com/api/v3/ip_addresses/${ioc}`,
         {
           headers: {
-            "x-apikey": process.env.VT_KEY.trim()
+            "x-apikey": process.env.VT_KEY
           }
         }
       );
 
-      result.sources.virustotal = await vtRes.json();
-    } else {
-      result.sources.virustotal = {
-        error: "VT_KEY missing in environment variables"
-      };
+      const vtData = await vt.json();
+      item.sources.virustotal = vtData;
+
+      const vtMalicious =
+        vtData?.data?.attributes?.last_analysis_stats?.malicious || 0;
+
+      // ---------------- SCORE ENGINE ----------------
+      item.score = abuseScore + vtMalicious * 10;
+
+      if (item.score > 70) item.severity = "HIGH";
+      else if (item.score > 30) item.severity = "MEDIUM";
+      else item.severity = "LOW";
+
+    } catch (e) {
+      item.error = e.message;
     }
 
-    res.status(200).json(result);
-
-  } catch (err) {
-    res.status(500).json({
-      error: "Backend failure",
-      details: err.message
-    });
+    results.push(item);
   }
+
+  res.json({ results });
+}
+
+// ---------------- IOC TYPE DETECTION ----------------
+function detectType(ioc) {
+  if (/^(?:\d{1,3}\.){3}\d{1,3}$/.test(ioc)) return "IP";
+  if (ioc.includes(".")) return "DOMAIN";
+  if (ioc.length === 32) return "MD5";
+  if (ioc.length === 40) return "SHA1";
+  if (ioc.length === 64) return "SHA256";
+  if (ioc.startsWith("http")) return "URL";
+  return "UNKNOWN";
 }
