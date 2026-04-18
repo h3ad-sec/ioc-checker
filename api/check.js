@@ -1,5 +1,18 @@
 export default async function handler(req, res) {
-  const iocs = (req.query.ioc || "").split(",").map(x => x.trim());
+  let iocs = [];
+
+  // Accept CSV / comma / array
+  const raw = req.query.ioc || "";
+
+  if (Array.isArray(raw)) {
+    iocs = raw;
+  } else {
+    iocs = raw
+      .replace(/\n/g, ",")
+      .split(",")
+      .map(x => x.trim())
+      .filter(Boolean);
+  }
 
   const results = [];
 
@@ -9,7 +22,7 @@ export default async function handler(req, res) {
       ioc,
       type: detectType(ioc),
       score: 0,
-      severity: "UNKNOWN",
+      severity: "LOW",
       sources: {}
     };
 
@@ -51,11 +64,10 @@ export default async function handler(req, res) {
       const vtData = await vt.json();
       item.sources.virustotal = vtData;
 
-      const vtMalicious =
-        vtData?.data?.attributes?.last_analysis_stats?.malicious || 0;
+      const vtMal = vtData?.data?.attributes?.last_analysis_stats?.malicious || 0;
 
       // ---------------- SCORE ENGINE ----------------
-      item.score = abuseScore + vtMalicious * 10;
+      item.score = abuseScore + vtMal * 10;
 
       if (item.score > 70) item.severity = "HIGH";
       else if (item.score > 30) item.severity = "MEDIUM";
@@ -68,10 +80,10 @@ export default async function handler(req, res) {
     results.push(item);
   }
 
-  res.json({ results });
+  res.json({ count: results.length, results });
 }
 
-// ---------------- IOC TYPE DETECTION ----------------
+// TYPE DETECTION
 function detectType(ioc) {
   if (/^(?:\d{1,3}\.){3}\d{1,3}$/.test(ioc)) return "IP";
   if (ioc.includes(".")) return "DOMAIN";
