@@ -1,22 +1,36 @@
 body {
-    background: #0d1117;
-    color: #00ff9d;
-    font-family: monospace;
-    text-align: center;
+  background: #0d1117;
+  color: #00ff9d;
+  font-family: monospace;
+  text-align: center;
 }
 
 .container {
-    margin-top: 100px;
+  margin-top: 80px;
 }
 
 input {
-    padding: 10px;
-    width: 300px;
+  padding: 10px;
+  width: 300px;
+  border: none;
+  outline: none;
 }
 
 button {
-    padding: 10px;
-    background: #00ff9d;
-    border: none;
-    cursor: pointer;
+  padding: 10px;
+  background: #00ff9d;
+  border: none;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+pre {
+  margin-top: 20px;
+  text-align: left;
+  width: 80%;
+  margin-left: auto;
+  margin-right: auto;
+  background: #161b22;
+  padding: 15px;
+  overflow-x: auto;
 }
