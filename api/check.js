@@ -86,10 +86,10 @@ export default async function handler(req, res) {
 // TYPE DETECTION
 function detectType(ioc) {
   if (/^(?:\d{1,3}\.){3}\d{1,3}$/.test(ioc)) return "IP";
-  if (ioc.includes(".")) return "DOMAIN";
+  if (ioc.startsWith("http")) return "URL";
   if (ioc.length === 32) return "MD5";
   if (ioc.length === 40) return "SHA1";
   if (ioc.length === 64) return "SHA256";
-  if (ioc.startsWith("http")) return "URL";
+  if (ioc.includes(".")) return "DOMAIN";
   return "UNKNOWN";
 }
