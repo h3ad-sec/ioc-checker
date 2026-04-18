@@ -5,7 +5,7 @@ async function checkIOC() {
   const output = document.getElementById("output");
 
   if (!ioc) {
-    output.innerText = "Enter an IOC first";
+    output.innerText = "Enter IOC";
     return;
   }
 
